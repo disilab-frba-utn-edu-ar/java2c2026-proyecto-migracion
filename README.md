@@ -17,7 +17,7 @@ contribuyentes, y registra los pagos que se hacen contra esas facturas.
   importe neto, el IVA calculado, un total, y queda "autorizada" con un
   CAE y su fecha de vencimiento. Puede estar en distintos estados
   (borrador, emitida, pagada, anulada).
-- **DetalleFactura**: cada línea de una factura — una descripción,
+- **DetalleFactura**: cada línea de una factura: una descripción,
   cantidad, precio unitario y alícuota de IVA.
 - **Pago**: un pago registrado contra una factura. Una factura puede
   recibir más de un pago hasta cubrir su importe total.
@@ -95,11 +95,9 @@ que cada capa interpreta por su cuenta.
 
 ## Requisito: un JDK 7 u 8 configurado
 
-Este proyecto compila con `maven.compiler.source/target = 1.7`. Si en tu
-PC ya hay instalado un JDK más nuevo (17, 21...), hace falta instalar
-además un JDK 8 — no reemplaza al que ya tenés, conviven los dos.
+Este proyecto compila con `maven.compiler.source/target = 1.7`, por lo que requiere la instalación de un JDK 8.
 
-**Instalarlo en Windows** (PowerShell, con `winget` — ya viene con
+**Instalación en Windows** (PowerShell, con `winget` — ya incluido en
 Windows 10/11):
 
 ```powershell
@@ -115,25 +113,24 @@ o `jenv` en su lugar.
 
 1. **Agregar el JDK 8 a IntelliJ** (si aún no está registrado):
    `File | Project Structure | Platform Settings | SDKs | +` y apuntarlo a
-   la carpeta donde instalaste el JDK 8.
+   la carpeta donde se realizó la instalación del JDK 8.
 2. **Asignarlo al proyecto**: `File | Project Structure | Project | SDK`,
    elegir el JDK 8. En `Language Level` dejar `8` (o `7` si el IDE lo
-   ofrece) — no `17`/`21`.
-3. **Asignarlo también a Maven** (importante — si no, IntelliJ usa el JDK
-   con el que corre el propio IDE para invocar `javac`, típicamente uno
-   moderno): `Settings | Build, Execution, Deployment | Build Tools |
-   Maven | Importing`, campo `JDK for importer`, elegir el JDK 8. Repetir
-   en `Settings | Build Tools | Maven | Runner`, campo `JRE`.
-4. **Levantar el proyecto**: abrir el panel Maven (`View | Tool Windows |
+   ofrece).
+3. **Asignarlo también a Maven** (importante para que IntelliJ no utilice el JDK
+   con el que corre el propio IDE para invocar `javac`): `Settings |
+   Build, Execution, Deployment | Build Tools | Maven | Importing`, campo `JDK for
+   importer`, elegir el JDK 8. Repetir en `Settings | Build Tools | Maven | Runner`, campo `JRE`.
+5. **Levantar el proyecto**: abrir el panel Maven (`View | Tool Windows |
    Maven`), expandir `legacy-monolith-facturacion | Plugins | tomcat7`, y
    hacer doble click en `tomcat7:run` (o crear una Run Configuration de
    tipo Maven con el goal `tomcat7:run`).
-5. Probar: `http://localhost:8080/arquita-legacy`.
+6. Probar: `http://localhost:8080/arquita-legacy`.
 
-Para utilizar desde la terminal, hace falta que **ese** `mvn` corra con el
+Para utilizar desde la terminal, se requiere que `mvn` corra con el
 JDK 8, no con el que esté primero en el `PATH` del sistema. En PowerShell,
-apuntar `JAVA_HOME` al JDK 8 antes de invocar Maven (solo afecta a esta
-ventana de PowerShell, no cambia nada del sistema):
+apuntar `JAVA_HOME` al JDK 8 antes de invocar Maven (este cambio solo se
+aplica a esa ventana de powershell):
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot"
@@ -143,19 +140,18 @@ mvn -v   # confirmar que dice "Java version: 1.8...."
 mvn tomcat7:run
 ```
 
-No hace falta Oracle ni ninguna base externa para esto: por defecto el
+No se requiere Oracle ni ninguna base externa para esto: por defecto el
 proyecto usa **H2 en memoria** (en modo de compatibilidad Oracle). La base
-es en memoria, así que cada `tomcat7:run` arranca desde cero.
+es en memoria, por lo que cada `tomcat7:run` arranca desde cero.
 
 ## Probar la API
 
-Entrar a `http://localhost:8080/arquita-legacy` a secas (sin nada después)
-da **404**: es esperado, no hay nada mapeado a la raíz — el `DispatcherServlet`
-solo atiende `/api/*` y `*.do` (ver `web.xml`). Toda la API cuelga de `/api`.
+Entrar a `http://localhost:8080/arquita-legacy` esperando un **404** como respuesta
+del servidor,
 
 Al arrancar se cargan automáticamente 4 contribuyentes de prueba con CUIT
-válido (ver `DataSeeder`). Estos dos son GET y se pueden probar pegando la
-URL directo en el navegador:
+válido (ver `DataSeeder`). Se pueden probar los siguientes endpoints de tipo
+GET para validar que la aplicación haya arrancado correctamente:
 
 - `http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-12345678-6`
 - `http://localhost:8080/arquita-legacy/api/facturas/por-receptor?cuit=20-12345678-6`
@@ -196,7 +192,7 @@ curl -X POST "http://localhost:8080/arquita-legacy/api/facturas/anular" \
 curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-12345678-6"
 ```
 
-## Stack tal cual está hoy (punto de partida)
+## Stack tal cual está hoy el proyecto
 
 - Java 7, compilado explícitamente con `source`/`target` 1.7 (requiere un
   JDK 7 u 8 instalado, ver arriba).
