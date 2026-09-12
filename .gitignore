@@ -1,0 +1,5 @@
+target/
+*.class
+factura-*.txt
+.idea/
+*.iml
