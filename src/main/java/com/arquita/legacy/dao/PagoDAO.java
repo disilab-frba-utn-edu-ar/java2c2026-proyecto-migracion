@@ -11,4 +11,6 @@ public interface PagoDAO {
     List<Pago> buscarPorFacturaId(Long facturaId);
 
     void guardar(Pago pago);
+
+    Pago registrarPagoViaProcedure(Long facturaId, double monto, String medioPago);
 }

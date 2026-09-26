@@ -19,7 +19,7 @@ public class ConexionOracleSingleton {
     private ConexionOracleSingleton() {
         Properties props = leerPropiedadesDeConexion();
         this.driverClassName = props.getProperty("jdbc.driverClassName", "oracle.jdbc.driver.OracleDriver");
-        this.url = props.getProperty("jdbc.url", "jdbc:oracle:thin:@localhost:1521:XE");
+        this.url = props.getProperty("jdbc.url", "jdbc:oracle:thin:@localhost:1521/XEPDB1");
         this.usuario = props.getProperty("jdbc.username", "arquita_app");
         this.clave = props.getProperty("jdbc.password", "arquita_app_2013");
         try {

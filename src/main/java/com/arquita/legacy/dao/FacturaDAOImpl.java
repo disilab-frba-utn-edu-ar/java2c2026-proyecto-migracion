@@ -1,11 +1,15 @@
 package com.arquita.legacy.dao;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.sql.DataSource;
 
 import org.hibernate.Query;
 import org.hibernate.Session;
@@ -18,9 +22,14 @@ import com.arquita.legacy.dominio.Factura;
 public class FacturaDAOImpl implements FacturaDAO {
 
     private SessionFactory sessionFactory;
+    private DataSource dataSource;
 
     public void setSessionFactory(SessionFactory sessionFactory) {
         this.sessionFactory = sessionFactory;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     @Override
@@ -98,6 +107,40 @@ public class FacturaDAOImpl implements FacturaDAO {
         Factura factura = (Factura) session.get(Factura.class, id);
         if (factura != null) {
             session.delete(factura);
+        }
+    }
+
+    @Override
+    public Long anularConProcedure(Long facturaId) {
+        Connection conexion = null;
+        CallableStatement statement = null;
+        try {
+            conexion = dataSource.getConnection();
+            statement = conexion.prepareCall("{call PKG_FACTURACION.anular_factura(?, ?)}");
+            statement.setLong(1, facturaId);
+            statement.registerOutParameter(2, Types.NUMERIC);
+            statement.execute();
+            long notaCreditoId = statement.getLong(2);
+            return statement.wasNull() ? null : notaCreditoId;
+        } catch (SQLException e) {
+            throw new RuntimeException(e.getMessage(), e);
+        } finally {
+            cerrar(statement, conexion);
+        }
+    }
+
+    private void cerrar(Statement statement, Connection conexion) {
+        if (statement != null) {
+            try {
+                statement.close();
+            } catch (SQLException ignored) {
+            }
+        }
+        if (conexion != null) {
+            try {
+                conexion.close();
+            } catch (SQLException ignored) {
+            }
         }
     }
 }

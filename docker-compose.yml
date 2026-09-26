@@ -1,0 +1,22 @@
+services:
+  oracle-db:
+    image: gvenzl/oracle-xe:21-slim-faststart
+    container_name: arquita-oracle
+    ports:
+      - "1521:1521"
+    environment:
+      ORACLE_PASSWORD: oracle_admin_2013
+      APP_USER: arquita_app
+      APP_USER_PASSWORD: arquita_app_2013
+    volumes:
+      - ./db/init:/container-entrypoint-initdb.d
+      - arquita-oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+volumes:
+  arquita-oracle-data:

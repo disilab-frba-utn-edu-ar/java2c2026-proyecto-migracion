@@ -33,9 +33,11 @@
 
     <bean id="facturaDAO" class="com.arquita.legacy.dao.FacturaDAOImpl">
         <property name="sessionFactory" ref="sessionFactory"/>
+        <property name="dataSource" ref="dataSource"/>
     </bean>
     <bean id="pagoDAO" class="com.arquita.legacy.dao.PagoDAOImpl">
         <property name="sessionFactory" ref="sessionFactory"/>
+        <property name="dataSource" ref="dataSource"/>
     </bean>
     <bean id="contribuyenteDAO" class="com.arquita.legacy.dao.ContribuyenteDAOImpl">
         <property name="sessionFactory" ref="sessionFactory"/>
@@ -44,11 +46,14 @@
         <property name="sessionFactory" ref="sessionFactory"/>
     </bean>
 
+    <bean id="autorizadorFiscalClient" class="com.arquita.caeclient.AutorizadorFiscalClient"/>
+
     <bean id="facturacionManager" class="com.arquita.legacy.service.FacturacionManager">
         <property name="facturaDAO" ref="facturaDAO"/>
         <property name="pagoDAO" ref="pagoDAO"/>
         <property name="contribuyenteDAO" ref="contribuyenteDAO"/>
         <property name="notaCreditoDAO" ref="notaCreditoDAO"/>
+        <property name="autorizadorFiscalClient" ref="autorizadorFiscalClient"/>
     </bean>
 
     <bean id="dataSeeder" class="com.arquita.legacy.arranque.DataSeeder" init-method="cargarDatosDemo">

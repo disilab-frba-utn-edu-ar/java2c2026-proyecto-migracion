@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.arquita.caeclient.AutorizadorFiscalClient;
 import com.arquita.legacy.dao.ContribuyenteDAO;
 import com.arquita.legacy.dao.FacturaDAO;
 import com.arquita.legacy.dao.NotaCreditoDAO;
@@ -27,6 +28,7 @@ public class FacturacionManager {
     private PagoDAO pagoDAO;
     private ContribuyenteDAO contribuyenteDAO;
     private NotaCreditoDAO notaCreditoDAO;
+    private AutorizadorFiscalClient autorizadorFiscalClient;
 
     private static final double COTIZACION_USD_HARDCODEADA = 1000.0;
 
@@ -46,6 +48,10 @@ public class FacturacionManager {
 
     public void setNotaCreditoDAO(NotaCreditoDAO notaCreditoDAO) {
         this.notaCreditoDAO = notaCreditoDAO;
+    }
+
+    public void setAutorizadorFiscalClient(AutorizadorFiscalClient autorizadorFiscalClient) {
+        this.autorizadorFiscalClient = autorizadorFiscalClient;
     }
 
     public Factura crearFactura(String cuitEmisor, String cuitReceptor, int tipoComprobante,
@@ -104,8 +110,7 @@ public class FacturacionManager {
             factura.setCotizacionAlEmitir(COTIZACION_USD_HARDCODEADA);
         }
 
-        // TODO: falta integrar esto con un sistema externo (a definir).
-        factura.setCae(generarCaeLocalDeMentira(cuitEmisor));
+        factura.setCae(autorizadorFiscalClient.autorizar(cuitEmisor, factura.getNumero()));
         factura.setCaeVencimiento(ArquitaUtils.sumarDias(new Date(), 10));
         factura.setEstado(EstadoFactura.EMITIDA);
 
@@ -127,11 +132,6 @@ public class FacturacionManager {
                 "Se emitio la factura " + factura.getNumero() + " por $" + total);
 
         return factura;
-    }
-
-    private String generarCaeLocalDeMentira(String cuitEmisor) {
-        return "CAE" + cuitEmisor.replace("-", "")
-                + String.valueOf(System.currentTimeMillis()).substring(5);
     }
 
     private synchronized long generarProximoNumero() {
@@ -161,67 +161,30 @@ public class FacturacionManager {
     }
 
     public Pago registrarPago(Long facturaId, double monto, String medioPago) {
-        Factura factura = facturaDAO.buscarPorId(facturaId);
-        if (factura == null) {
-            ArquitaUtils.log("Factura inexistente: " + facturaId);
+        try {
+            return pagoDAO.registrarPagoViaProcedure(facturaId, monto, medioPago);
+        } catch (RuntimeException e) {
+            ArquitaUtils.log("No se pudo registrar el pago: " + e.getMessage());
             return null;
         }
-
-        switch (factura.getEstado()) {
-            case EstadoFactura.BORRADOR:
-                ArquitaUtils.log("No se puede pagar una factura en borrador.");
-                return null;
-            case EstadoFactura.ANULADA:
-                ArquitaUtils.log("No se puede pagar una factura anulada.");
-                return null;
-            case EstadoFactura.PAGADA:
-                ArquitaUtils.log("La factura ya estaba pagada, se registra pago igual (posible duplicado).");
-                break;
-            case EstadoFactura.EMITIDA:
-                break;
-            default:
-                ArquitaUtils.log("Estado de factura desconocido: " + factura.getEstado());
-                return null;
-        }
-
-        Pago pago = new Pago();
-        pago.setFacturaId(facturaId);
-        pago.setFecha(new Date());
-        pago.setMonto(monto);
-        pago.setMedioPago(medioPago);
-        pago.setEstado("CONFIRMADO");
-
-        pagoDAO.guardar(pago);
-
-        if (montoCubreTotal(facturaId, factura.getImporteTotal())) {
-            factura.setEstado(EstadoFactura.PAGADA);
-            facturaDAO.actualizar(factura);
-        }
-
-        return pago;
-    }
-
-    private boolean montoCubreTotal(Long facturaId, double importeTotal) {
-        List<Pago> pagos = pagoDAO.buscarPorFacturaId(facturaId);
-        double acumulado = 0;
-        for (int i = 0; i < pagos.size(); i++) {
-            acumulado = acumulado + pagos.get(i).getMonto();
-        }
-        return acumulado >= importeTotal;
     }
 
     public Factura anularFactura(Long facturaId) {
-        Factura factura = facturaDAO.buscarPorId(facturaId);
-        if (factura == null) {
+        try {
+            Long notaCreditoId = facturaDAO.anularConProcedure(facturaId);
+            Factura factura = facturaDAO.buscarPorId(facturaId);
+            if (notaCreditoId != null) {
+                NotificacionEmailHelper.enviarNotificacionFactura(
+                        factura.getCuitReceptor(),
+                        "Nota de credito emitida",
+                        "Se emitio una nota de credito por la factura " + factura.getNumero()
+                                + ". Motivo: Anulacion de factura pagada");
+            }
+            return factura;
+        } catch (RuntimeException e) {
+            ArquitaUtils.log("No se pudo anular la factura: " + e.getMessage());
             return null;
         }
-        if (factura.getEstado() == EstadoFactura.PAGADA) {
-            ArquitaUtils.log("Factura ya pagada: se emite nota de credito en vez de anular directamente.");
-            emitirNotaCredito(facturaId, "Anulacion de factura pagada");
-        }
-        factura.setEstado(EstadoFactura.ANULADA);
-        facturaDAO.actualizar(factura);
-        return factura;
     }
 
     public NotaCredito emitirNotaCredito(Long facturaId, String motivo) {
@@ -238,8 +201,7 @@ public class FacturacionManager {
         notaCredito.setNumero(generarProximoNumero());
         notaCredito.setMotivo(motivo);
         notaCredito.setImporte(facturaOriginal.getImporteTotal());
-        // TODO: falta integrar esto con un sistema externo (a definir).
-        notaCredito.setCae(generarCaeLocalDeMentira(facturaOriginal.getCuitEmisor()));
+        notaCredito.setCae(autorizadorFiscalClient.autorizar(facturaOriginal.getCuitEmisor(), notaCredito.getNumero()));
         notaCredito.setCaeVencimiento(ArquitaUtils.sumarDias(new Date(), 10));
 
         notaCreditoDAO.guardar(notaCredito);

@@ -25,14 +25,33 @@
         <spring.version>3.2.18.RELEASE</spring.version>
         <hibernate.version>4.2.21.Final</hibernate.version>
 
-        <jdbc.driverClassName>org.h2.Driver</jdbc.driverClassName>
-        <jdbc.url>jdbc:h2:mem:arquita;MODE=Oracle;DB_CLOSE_DELAY=-1</jdbc.url>
-        <jdbc.username>sa</jdbc.username>
-        <jdbc.password></jdbc.password>
-        <hibernate.dialect>org.hibernate.dialect.H2Dialect</hibernate.dialect>
+        <!-- Apunta al Oracle XE que levanta docker-compose.yml (ver README.md) -->
+        <jdbc.driverClassName>oracle.jdbc.OracleDriver</jdbc.driverClassName>
+        <!-- gvenzl/oracle-xe crea el usuario de la app dentro del pluggable
+             database XEPDB1, no en el CDB raiz -> hace falta el service name
+             con "/" (no el SID con ":"). -->
+        <jdbc.url>jdbc:oracle:thin:@localhost:1521/XEPDB1</jdbc.url>
+        <jdbc.username>arquita_app</jdbc.username>
+        <jdbc.password>arquita_app_2013</jdbc.password>
+        <hibernate.dialect>org.hibernate.dialect.Oracle10gDialect</hibernate.dialect>
     </properties>
 
+    <repositories>
+        <!-- arquita-cae-client no esta en Maven Central: es un .jar vendorizado
+             en libs/ con estructura de repositorio Maven (ver libs/com/arquita/...). -->
+        <repository>
+            <id>project-libs</id>
+            <url>file://${project.basedir}/libs</url>
+        </repository>
+    </repositories>
+
     <dependencies>
+
+        <dependency>
+            <groupId>com.arquita</groupId>
+            <artifactId>arquita-cae-client</artifactId>
+            <version>1.0.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework</groupId>
@@ -71,10 +90,11 @@
             <version>${hibernate.version}</version>
         </dependency>
 
+        <!-- ojdbc8, no ojdbc11: el proyecto compila y corre con JDK 7/8 (ver README.md) -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <version>1.4.199</version>
+            <groupId>com.oracle.database.jdbc</groupId>
+            <artifactId>ojdbc8</artifactId>
+            <version>23.4.0.24.05</version>
         </dependency>
 
         <dependency>
@@ -159,25 +179,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>oracle</id>
-            <properties>
-                <jdbc.driverClassName>oracle.jdbc.OracleDriver</jdbc.driverClassName>
-                <jdbc.url>jdbc:oracle:thin:@localhost:1521:XE</jdbc.url>
-                <jdbc.username>arquita_app</jdbc.username>
-                <jdbc.password>arquita_app_2013</jdbc.password>
-                <hibernate.dialect>org.hibernate.dialect.Oracle10gDialect</hibernate.dialect>
-            </properties>
-            <dependencies>
-                <dependency>
-                    <groupId>com.oracle.database.jdbc</groupId>
-                    <artifactId>ojdbc11</artifactId>
-                    <version>23.4.0.24.05</version>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 
 </project>

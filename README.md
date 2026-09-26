@@ -93,13 +93,44 @@ foráneas ni asociaciones JPA reales: hoy son simples campos `String`/`Long`
 sueltos (`cuitEmisor`, `cuitReceptor`, `facturaId`, `facturaOriginalId`)
 que cada capa interpreta por su cuenta.
 
-## Requisito: un JDK 7 u 8 configurado
+### Reglas de negocio (comportamiento actual)
 
-Este proyecto compila con `maven.compiler.source/target = 1.7`. Si en tu
-PC ya hay instalado un JDK más nuevo (17, 21...), hace falta instalar
-además un JDK 8 — no reemplaza al que ya tenés, conviven los dos.
+- El CUIT de emisor y receptor se valida con dígito verificador; si no es
+  válido, se rechaza la operación.
+- Solo un contribuyente `RESPONSABLE_INSCRIPTO` puede emitir una Factura A.
+- La alícuota de IVA es 21% en general, 0% si el emisor es `MONOTRIBUTO`.
+- Si el total de una factura supera $1.000.000, el receptor tiene que estar
+  previamente dado de alta (no se crea automáticamente en ese momento).
+- Un pago en efectivo mayor a $500.000 se rechaza (requeriría autorización
+  adicional, no implementada).
+- Un pago no puede superar el saldo pendiente de la factura.
+- No se puede registrar un pago sobre una factura en estado `BORRADOR` o
+  `ANULADA`.
+- Cuando la suma de los pagos de una factura cubre su importe total, la
+  factura pasa a estado `PAGADA` automáticamente, sin requerir un paso
+  adicional.
+- Anular una factura que ya estaba `PAGADA` emite automáticamente una nota
+  de crédito por el importe total; anular una factura en cualquier otro
+  estado no tiene validaciones adicionales.
+- También se puede emitir una nota de crédito para una factura existente en
+  cualquier momento, en cualquier estado, sin que eso la anule (endpoint
+  separado, ver más abajo).
+- Cada factura y cada nota de crédito quedan "autorizadas" con un CAE y una
+  fecha de vencimiento (10 días desde la emisión).
 
-**Instalarlo en Windows** (PowerShell, con `winget` — ya viene con
+## Instalación y puesta en marcha
+
+Requisitos previos: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+instalado y en ejecución, y un JDK 7 u 8 (ver el paso 1).
+
+### 1. JDK 7 u 8
+
+El proyecto compila con `maven.compiler.source/target = 1.7`. Si en el
+equipo ya hay instalado un JDK más reciente (17, 21...), es necesario
+instalar además un JDK 8 — no reemplaza al que ya está instalado, ambos
+pueden convivir.
+
+**Instalación en Windows** (PowerShell, mediante `winget`, incluido en
 Windows 10/11):
 
 ```powershell
@@ -108,59 +139,85 @@ winget install --id EclipseAdoptium.Temurin.8.JDK --silent --accept-package-agre
 
 Esto instala Eclipse Temurin JDK 8 en
 `C:\Program Files\Eclipse Adoptium\jdk-8.0.x.x-hotspot` (la versión exacta
-puede variar). En Mac/Linux, usar `sdkman` (`sdk install java 8.0.462-tem`)
-o `jenv` en su lugar.
+puede variar). En Mac/Linux, se recomienda utilizar `sdkman`
+(`sdk install java 8.0.462-tem`) o `jenv`.
 
-## Configurar el proyecto en IntelliJ IDEA
+### 2. Base de datos: Oracle mediante Docker
 
-1. **Agregar el JDK 8 a IntelliJ** (si aún no está registrado):
-   `File | Project Structure | Platform Settings | SDKs | +` y apuntarlo a
-   la carpeta donde instalaste el JDK 8.
-2. **Asignarlo al proyecto**: `File | Project Structure | Project | SDK`,
-   elegir el JDK 8. En `Language Level` dejar `8` (o `7` si el IDE lo
-   ofrece) — no `17`/`21`.
-3. **Asignarlo también a Maven** (importante — si no, IntelliJ usa el JDK
-   con el que corre el propio IDE para invocar `javac`, típicamente uno
-   moderno): `Settings | Build, Execution, Deployment | Build Tools |
-   Maven | Importing`, campo `JDK for importer`, elegir el JDK 8. Repetir
-   en `Settings | Build Tools | Maven | Runner`, campo `JRE`.
-4. **Levantar el proyecto**: abrir el panel Maven (`View | Tool Windows |
-   Maven`), expandir `legacy-monolith-facturacion | Plugins | tomcat7`, y
-   hacer doble click en `tomcat7:run` (o crear una Run Configuration de
-   tipo Maven con el goal `tomcat7:run`).
-5. Probar: `http://localhost:8080/arquita-legacy`.
+```powershell
+docker compose up -d
+docker compose logs -f oracle-db   # esperar "DATABASE IS READY TO USE!"
+```
 
-Para utilizar desde la terminal, hace falta que **ese** `mvn` corra con el
-JDK 8, no con el que esté primero en el `PATH` del sistema. En PowerShell,
-apuntar `JAVA_HOME` al JDK 8 antes de invocar Maven (solo afecta a esta
-ventana de PowerShell, no cambia nada del sistema):
+El primer inicio demora entre 1 y 2 minutos: se crea la base de datos, el
+usuario de la aplicación (`arquita_app` / `arquita_app_2013`, ver `pom.xml`)
+y se ejecutan los scripts de `db/init/`. Los datos se conservan en un volumen
+de Docker (`arquita-oracle-data`), por lo que persisten luego de un
+`docker compose down`; para reiniciar desde cero: `docker compose down -v`.
+
+### 3. Compilación y ejecución
+
+**Desde la terminal**, con la variable `JAVA_HOME` apuntando al JDK 8 (el
+cambio afecta únicamente a la sesión actual de PowerShell, no modifica la
+configuración del sistema):
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot"
 $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
-cd "legacy-monolith"
 mvn -v   # confirmar que dice "Java version: 1.8...."
 mvn tomcat7:run
 ```
 
-No hace falta Oracle ni ninguna base externa para esto: por defecto el
-proyecto usa **H2 en memoria** (en modo de compatibilidad Oracle). La base
-es en memoria, así que cada `tomcat7:run` arranca desde cero.
+**Desde IntelliJ IDEA**:
 
-## Probar la API
+1. **Agregar el JDK 8 a IntelliJ** (si aún no está registrado): en
+   `File | Project Structure | Platform Settings | SDKs | +` debe indicarse
+   la carpeta donde se instaló el JDK 8.
+2. **Asignarlo al proyecto**: en `File | Project Structure | Project | SDK`
+   debe seleccionarse el JDK 8. En `Language Level` debe dejarse `8` (o `7`
+   si el IDE lo ofrece); nunca `17` ni `21`.
+3. **Asignarlo también a Maven** (de lo contrario, IntelliJ utiliza el JDK
+   con el que se ejecuta el propio IDE para invocar `javac`, generalmente
+   uno más moderno): en `Settings | Build, Execution, Deployment |
+   Build Tools | Maven | Importing`, campo `JDK for importer`, debe
+   seleccionarse el JDK 8. Debe repetirse el mismo paso en
+   `Settings | Build Tools | Maven | Runner`, campo `JRE`.
+4. **Iniciar el proyecto**: abrir el panel Maven (`View | Tool Windows |
+   Maven`), expandir `legacy-monolith-facturacion | Plugins | tomcat7`, y
+   ejecutar `tomcat7:run` con doble clic (o crear una Run Configuration de
+   tipo Maven con el goal `tomcat7:run`).
 
-Entrar a `http://localhost:8080/arquita-legacy` a secas (sin nada después)
-da **404**: es esperado, no hay nada mapeado a la raíz — el `DispatcherServlet`
-solo atiende `/api/*` y `*.do` (ver `web.xml`). Toda la API cuelga de `/api`.
+### 4. Verificación del inicio
 
-Al arrancar se cargan automáticamente 4 contribuyentes de prueba con CUIT
-válido (ver `DataSeeder`). Estos dos son GET y se pueden probar pegando la
-URL directo en el navegador:
+`http://localhost:8080/arquita-legacy`. La sección siguiente detalla las
+URLs disponibles de la API.
+
+## Uso de la API
+
+Acceder a `http://localhost:8080/arquita-legacy` sin ninguna ruta adicional
+devuelve **404**: es el comportamiento esperado, dado que no hay nada mapeado
+a la raíz — el `DispatcherServlet` solo atiende `/api/*` y `*.do` (ver
+`web.xml`). Toda la API se expone bajo `/api`.
+
+| Método | Endpoint | Qué hace |
+|---|---|---|
+| POST | `/contribuyentes/alta` | Da de alta un contribuyente |
+| GET | `/contribuyentes/buscar?cuit=...` | Busca un contribuyente por CUIT |
+| POST | `/facturas/crear` | Crea y emite una factura (con CAE) |
+| GET | `/facturas/por-receptor?cuit=...` | Lista las facturas recibidas por un CUIT |
+| POST | `/facturas/anular` | Anula una factura |
+| POST | `/facturas/nota-credito` | Emite una nota de crédito para una factura existente |
+| POST | `/pagos/registrar` | Registra un pago contra una factura |
+
+Al iniciar la aplicación se cargan automáticamente 4 contribuyentes de
+prueba con CUIT válido (ver `DataSeeder`). Los siguientes dos endpoints son
+GET y pueden probarse ingresando la URL directamente en el navegador:
 
 - `http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-12345678-6`
 - `http://localhost:8080/arquita-legacy/api/facturas/por-receptor?cuit=20-12345678-6`
 
-El resto son POST, hace falta `curl` (o Postman/Insomnia):
+El resto de los endpoints son POST; para probarlos se requiere `curl` (o una
+herramienta equivalente, como Postman o Insomnia):
 
 ```bash
 # Crear una factura en pesos
@@ -192,11 +249,22 @@ curl -X POST "http://localhost:8080/arquita-legacy/api/pagos/registrar" \
 curl -X POST "http://localhost:8080/arquita-legacy/api/facturas/anular" \
   --data-urlencode "facturaId=<id>"
 
+# Emitir una nota de credito para una factura, sin anularla
+curl -X POST "http://localhost:8080/arquita-legacy/api/facturas/nota-credito" \
+  --data-urlencode "facturaId=<id>" \
+  --data-urlencode "motivo=Descuento comercial acordado"
+
+# Dar de alta un contribuyente nuevo
+curl -X POST "http://localhost:8080/arquita-legacy/api/contribuyentes/alta" \
+  --data-urlencode "cuit=23-11111111-1" \
+  --data-urlencode "razonSocial=Cliente Nuevo SA" \
+  --data-urlencode "condicionIva=RESPONSABLE_INSCRIPTO"
+
 # Buscar un contribuyente de prueba
 curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-12345678-6"
 ```
 
-## Stack tal cual está hoy (punto de partida)
+## Stack tecnológico (estado actual)
 
 - Java 7, compilado explícitamente con `source`/`target` 1.7 (requiere un
   JDK 7 u 8 instalado, ver arriba).
@@ -204,10 +272,11 @@ curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-123
   beans es XML (`applicationContext.xml`, `dispatcher-servlet.xml`), hace
   falta `web.xml` (Servlet 2.5) y se empaqueta como WAR.
 - Hibernate 4.2: `SessionFactory` configurada a mano vía `hibernate.cfg.xml`.
-- H2 en memoria por defecto (modo Oracle) / Oracle real con `-Poracle`.
+- Oracle XE real, levantado con Docker Compose (ver arriba).
 - Log4j 1.x.
-- Generación del CAE resuelta con un placeholder local — la integración
-  externa queda marcada como `TODO` en el código.
+- Generación del CAE delegada a una librería externa
+  (`com.arquita:arquita-cae-client`, vendorizada en `libs/`), a través de
+  `AutorizadorFiscalClient`.
 
 ## Estructura del código
 
@@ -219,4 +288,9 @@ src/main/java/com/arquita/legacy/
   controller/  controllers Spring MVC
   util/        ArquitaUtils
   arranque/    seed de datos de demo al levantar el contexto
+
+libs/          .jar vendorizado (arquita-cae-client) con estructura de repositorio Maven,
+                 referenciado directo desde pom.xml (no requiere compilacion adicional)
+
+db/init/       scripts que se ejecutan al crear el contenedor de Oracle (esquema y objetos PL/SQL)
 ```

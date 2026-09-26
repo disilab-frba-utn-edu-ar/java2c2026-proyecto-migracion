@@ -21,4 +21,6 @@ public interface FacturaDAO {
     void eliminar(Long id);
 
     List<Factura> ejecutarConsultaSql(String sqlWhereClause);
+
+    Long anularConProcedure(Long facturaId);
 }
