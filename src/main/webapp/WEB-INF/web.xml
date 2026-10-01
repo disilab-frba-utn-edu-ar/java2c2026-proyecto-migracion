@@ -6,29 +6,36 @@
 
     <display-name>Arquita Legacy Monolito de Facturacion</display-name>
 
-    <context-param>
-        <param-name>contextConfigLocation</param-name>
-        <param-value>/WEB-INF/applicationContext.xml</param-value>
-    </context-param>
-
     <listener>
-        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+        <listener-class>com.arquita.legacy.arranque.ArranqueListener</listener-class>
     </listener>
 
     <servlet>
-        <servlet-name>dispatcher</servlet-name>
-        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
-        <load-on-startup>1</load-on-startup>
+        <servlet-name>contribuyentes</servlet-name>
+        <servlet-class>com.arquita.legacy.web.ContribuyenteServlet</servlet-class>
     </servlet>
-
     <servlet-mapping>
-        <servlet-name>dispatcher</servlet-name>
-        <url-pattern>/api/*</url-pattern>
+        <servlet-name>contribuyentes</servlet-name>
+        <url-pattern>/api/contribuyentes/*</url-pattern>
     </servlet-mapping>
 
+    <servlet>
+        <servlet-name>facturas</servlet-name>
+        <servlet-class>com.arquita.legacy.web.FacturaServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
     <servlet-mapping>
-        <servlet-name>dispatcher</servlet-name>
-        <url-pattern>*.do</url-pattern>
+        <servlet-name>facturas</servlet-name>
+        <url-pattern>/api/facturas/*</url-pattern>
+    </servlet-mapping>
+
+    <servlet>
+        <servlet-name>pagos</servlet-name>
+        <servlet-class>com.arquita.legacy.web.PagoServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>pagos</servlet-name>
+        <url-pattern>/api/pagos/*</url-pattern>
     </servlet-mapping>
 
     <welcome-file-list>

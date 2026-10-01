@@ -1,7 +1,8 @@
 # Arquita Legacy - Monolito de Facturación (proyecto base del curso)
 
 Este proyecto consiste en un monolito de facturación electrónica con temática del organismo
-fiscal **Arquita**, construido con Java 7, Spring 3.x y configurado a mano con XML.
+fiscal **Arquita**, construido con Java 7, servlets planos (Servlet API 2.5) y Hibernate
+configurado a mano con XML (sin Spring, sin anotaciones de persistencia).
 
 ## Dominio
 
@@ -89,9 +90,9 @@ classDiagram
 ```
 
 Las flechas punteadas (`..>`) marcan relaciones que **no** son claves
-foráneas ni asociaciones JPA reales: hoy son simples campos `String`/`Long`
-sueltos (`cuitEmisor`, `cuitReceptor`, `facturaId`, `facturaOriginalId`)
-que cada capa interpreta por su cuenta.
+foráneas ni asociaciones reales en el mapeo de Hibernate: hoy son simples
+campos `String`/`Long` sueltos (`cuitEmisor`, `cuitReceptor`, `facturaId`,
+`facturaOriginalId`) que cada parte del código interpreta por su cuenta.
 
 ### Reglas de negocio (comportamiento actual)
 
@@ -196,8 +197,9 @@ URLs disponibles de la API.
 
 Acceder a `http://localhost:8080/arquita-legacy` sin ninguna ruta adicional
 devuelve **404**: es el comportamiento esperado, dado que no hay nada mapeado
-a la raíz — el `DispatcherServlet` solo atiende `/api/*` y `*.do` (ver
-`web.xml`). Toda la API se expone bajo `/api`.
+a la raíz — cada recurso es un servlet plano declarado a mano en `web.xml`,
+mapeado a `/api/contribuyentes/*`, `/api/facturas/*` o `/api/pagos/*`. Toda
+la API se expone bajo `/api`.
 
 | Método | Endpoint | Qué hace |
 |---|---|---|
@@ -268,10 +270,18 @@ curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-123
 
 - Java 7, compilado explícitamente con `source`/`target` 1.7 (requiere un
   JDK 7 u 8 instalado, ver arriba).
-- Spring Framework 3.2.18 clásico: sin Spring Boot, todo el wiring de
-  beans es XML (`applicationContext.xml`, `dispatcher-servlet.xml`), hace
-  falta `web.xml` (Servlet 2.5) y se empaqueta como WAR.
-- Hibernate 4.2: `SessionFactory` configurada a mano vía `hibernate.cfg.xml`.
+- **Sin Spring, sin contenedor de inyección de dependencias.** La API web
+  son servlets planos (`javax.servlet.http.HttpServlet`) declarados a mano
+  en `web.xml` (Servlet 2.5), sin `@WebServlet` ni `DispatcherServlet`; se
+  empaqueta como WAR. No hay capas de controller/service/dao separadas:
+  cada servlet concentra validaciones, consultas y armado de la respuesta.
+- Hibernate 4.2 con **mapeo clásico por XML** (`*.hbm.xml`, ver
+  `src/main/resources/mapeo/`): las entidades de `dominio/` son POJOs sin
+  ninguna anotación de persistencia. La `EntityManagerFactory` se arma a
+  mano (`com.arquita.legacy.persistencia.HibernateUtil`,
+  `Persistence.createEntityManagerFactory(...)`) vía
+  `src/main/resources/META-INF/persistence.xml`, sin pool externo (usa el
+  `DriverManagerConnectionProvider` interno de Hibernate).
 - Oracle XE real, levantado con Docker Compose (ver arriba).
 - Log4j 1.x.
 - Generación del CAE delegada a una librería externa
@@ -282,12 +292,16 @@ curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-123
 
 ```
 src/main/java/com/arquita/legacy/
-  dominio/     entidades JPA
-  dao/         acceso a datos
-  service/     FacturacionManager
-  controller/  controllers Spring MVC
-  util/        ArquitaUtils
-  arranque/    seed de datos de demo al levantar el contexto
+  dominio/       entidades (POJOs, mapeadas por XML en resources/mapeo/)
+  persistencia/  HibernateUtil (EntityManagerFactory a mano) y el singleton
+                 de conexion JDBC usado para llamar a los procedures PL/SQL
+  web/           servlets planos: ContribuyenteServlet, FacturaServlet, PagoServlet
+  util/          ArquitaUtils, Constantes, NotificacionEmailHelper
+  arranque/      ArranqueListener (ServletContextListener) + seed de datos de demo
+
+src/main/resources/
+  META-INF/persistence.xml   unidad de persistencia JPA (RESOURCE_LOCAL)
+  mapeo/*.hbm.xml            mapeo entidad <-> tabla, uno por entidad
 
 libs/          .jar vendorizado (arquita-cae-client) con estructura de repositorio Maven,
                  referenciado directo desde pom.xml (no requiere compilacion adicional)
