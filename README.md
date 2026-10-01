@@ -121,18 +121,61 @@ campos `String`/`Long` sueltos (`cuitEmisor`, `cuitReceptor`, `facturaId`,
 
 ## Instalación y puesta en marcha
 
-Requisitos previos: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-instalado y en ejecución, y un JDK 7 u 8 (ver el paso 1).
+### Opción rápida: todo con Docker (recomendado)
 
-### 1. JDK 7 u 8
+Único requisito: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+instalado y en ejecución. **No hace falta instalar Java ni Maven**: el
+JDK 7/8 y el Maven viejo que pide este proyecto quedan empaquetados dentro
+de la imagen (ver `Dockerfile`).
 
-El proyecto compila con `maven.compiler.source/target = 1.7`. Si en el
-equipo ya hay instalado un JDK más reciente (17, 21...), es necesario
-instalar además un JDK 8 — no reemplaza al que ya está instalado, ambos
-pueden convivir.
+```bash
+docker compose up --build -d
+```
 
-**Instalación en Windows** (PowerShell, mediante `winget`, incluido en
-Windows 10/11):
+Con eso alcanza: levanta la base Oracle, espera a que esté lista
+(`healthcheck`) y recién ahí compila y arranca la aplicación en su propio
+contenedor, publicada en `http://localhost:8080/arquita-legacy`. El primer
+arranque tarda unos minutos (descarga de imágenes, compilación Maven e
+inicialización de Oracle); los siguientes son mucho más rápidos porque
+Docker cachea las capas.
+
+Para seguir el progreso:
+
+```bash
+docker compose logs -f app   # esperar la linea "Server startup in ... ms"
+```
+
+Si el puerto 8080 ya está ocupado en tu máquina, se puede publicar en otro
+puerto sin tocar ningún archivo:
+
+```bash
+APP_PORT=18080 docker compose up --build -d
+```
+
+Para bajar todo (conservando los datos en el volumen de Oracle):
+
+```bash
+docker compose down
+```
+
+Para reiniciar desde cero (borra también los datos de la base):
+
+```bash
+docker compose down -v
+```
+
+### Opción manual: compilar y correr en la máquina (modo desarrollo)
+
+Para iterar más rápido sobre el código Java sin reconstruir la imagen cada
+vez, se puede seguir compilando y corriendo directo en la máquina — para
+esto sí hace falta instalar un JDK 7 u 8 (el proyecto compila con
+`maven.compiler.source/target = 1.7`).
+
+**JDK 7 u 8**: si en el equipo ya hay instalado un JDK más reciente (17,
+21...), hace falta instalar además un JDK 8 — no reemplaza al que ya está
+instalado, ambos pueden convivir.
+
+En Windows (PowerShell, mediante `winget`, incluido en Windows 10/11):
 
 ```powershell
 winget install --id EclipseAdoptium.Temurin.8.JDK --silent --accept-package-agreements --accept-source-agreements
@@ -143,10 +186,11 @@ Esto instala Eclipse Temurin JDK 8 en
 puede variar). En Mac/Linux, se recomienda utilizar `sdkman`
 (`sdk install java 8.0.462-tem`) o `jenv`.
 
-### 2. Base de datos: Oracle mediante Docker
+**Solo la base de datos con Docker** (sin el servicio `app`, que en este
+modo corre afuera de Docker):
 
-```powershell
-docker compose up -d
+```bash
+docker compose up -d oracle-db
 docker compose logs -f oracle-db   # esperar "DATABASE IS READY TO USE!"
 ```
 
@@ -156,11 +200,9 @@ y se ejecutan los scripts de `db/init/`. Los datos se conservan en un volumen
 de Docker (`arquita-oracle-data`), por lo que persisten luego de un
 `docker compose down`; para reiniciar desde cero: `docker compose down -v`.
 
-### 3. Compilación y ejecución
-
-**Desde la terminal**, con la variable `JAVA_HOME` apuntando al JDK 8 (el
-cambio afecta únicamente a la sesión actual de PowerShell, no modifica la
-configuración del sistema):
+**Compilación y ejecución desde la terminal**, con la variable `JAVA_HOME`
+apuntando al JDK 8 (el cambio afecta únicamente a la sesión actual de
+PowerShell, no modifica la configuración del sistema):
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot"
@@ -188,7 +230,7 @@ mvn tomcat7:run
    ejecutar `tomcat7:run` con doble clic (o crear una Run Configuration de
    tipo Maven con el goal `tomcat7:run`).
 
-### 4. Verificación del inicio
+### Verificación del inicio
 
 `http://localhost:8080/arquita-legacy`. La sección siguiente detalla las
 URLs disponibles de la API.
@@ -287,6 +329,11 @@ curl "http://localhost:8080/arquita-legacy/api/contribuyentes/buscar?cuit=20-123
 - Generación del CAE delegada a una librería externa
   (`com.arquita:arquita-cae-client`, vendorizada en `libs/`), a través de
   `AutorizadorFiscalClient`.
+- `Dockerfile` multi-stage para la opción rápida de instalación: la etapa
+  de build usa `maven:3.9-eclipse-temurin-8` (Maven 3.9 + JDK 8 — el JDK 8
+  evita que `maven-war-plugin`/`tomcat7-maven-plugin`, de ~2012-2014,
+  choquen con el module system de JDK 9+) y la etapa final es
+  `tomcat:8.5-jdk8-temurin-jammy`, con el WAR ya desplegado.
 
 ## Estructura del código
 
@@ -307,4 +354,7 @@ libs/          .jar vendorizado (arquita-cae-client) con estructura de repositor
                  referenciado directo desde pom.xml (no requiere compilacion adicional)
 
 db/init/       scripts que se ejecutan al crear el contenedor de Oracle (esquema y objetos PL/SQL)
+
+Dockerfile          build multi-stage de la app (ver "Stack tecnologico")
+docker-compose.yml  orquesta oracle-db + app; "docker compose up --build -d" levanta todo
 ```

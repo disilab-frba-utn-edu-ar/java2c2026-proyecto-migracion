@@ -18,5 +18,23 @@ services:
       retries: 20
       start_period: 60s
 
+  # La app se compila y se empaqueta dentro de la imagen (ver Dockerfile):
+  # no hace falta tener Maven ni un JDK 7/8 instalado en la maquina para
+  # levantar el proyecto completo, alcanza con "docker compose up --build -d".
+  app:
+    build:
+      context: .
+      args:
+        # "oracle-db" es el nombre del servicio de arriba, resuelto por la
+        # red interna de docker compose (no es "localhost" porque la app
+        # corre en su propio contenedor).
+        JDBC_URL: jdbc:oracle:thin:@oracle-db:1521/XEPDB1
+    container_name: arquita-app
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+
 volumes:
   arquita-oracle-data:
