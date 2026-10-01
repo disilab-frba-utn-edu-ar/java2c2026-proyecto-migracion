@@ -1,33 +1,25 @@
 package com.arquita.legacy.dominio;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import java.io.Serializable;
 
-@Entity
-@Table(name = "CONTRIBUYENTE")
-public class Contribuyente {
+/**
+ * POJO mapeado por XML: ver src/main/resources/mapeo/Contribuyente.hbm.xml.
+ * Sin anotaciones de persistencia a proposito -- asi se mapeaba antes de JPA.
+ */
+public class Contribuyente implements Serializable {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    private static final long serialVersionUID = 1L;
+
     private Long id;
 
-    @Column(name = "CUIT", length = 13, nullable = false)
     private String cuit;
 
-    @Column(name = "RAZON_SOCIAL")
     private String razonSocial;
 
-    @Column(name = "CONDICION_IVA")
     private String condicionIva;
 
-    @Column(name = "DOMICILIO_FISCAL")
     private String domicilioFiscal;
 
-    @Column(name = "ACTIVO")
     private int activo = 1;
 
     public Contribuyente() {

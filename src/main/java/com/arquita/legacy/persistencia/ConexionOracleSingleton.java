@@ -1,4 +1,4 @@
-package com.arquita.legacy.dao;
+package com.arquita.legacy.persistencia;
 
 import java.io.InputStream;
 import java.sql.Connection;

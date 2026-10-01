@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.arquita.legacy.dominio">
+
+    <class name="Pago" table="PAGO">
+
+        <id name="id" column="ID" type="java.lang.Long">
+            <generator class="sequence">
+                <param name="sequence">HIBERNATE_SEQUENCE</param>
+            </generator>
+        </id>
+
+        <!-- facturaId es un Long plano, no una asociacion many-to-one, tal
+             como estaba antes con @Column en lugar de @ManyToOne. -->
+        <property name="facturaId" column="FACTURA_ID" type="java.lang.Long" not-null="true"/>
+        <property name="fecha" column="FECHA" type="timestamp"/>
+        <property name="monto" column="MONTO" type="double"/>
+        <property name="medioPago" column="MEDIO_PAGO" type="string"/>
+        <property name="estado" column="ESTADO" type="string"/>
+
+    </class>
+
+</hibernate-mapping>

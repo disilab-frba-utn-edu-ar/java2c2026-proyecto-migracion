@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.arquita.legacy.dominio">
+
+    <class name="Contribuyente" table="CONTRIBUYENTE">
+
+        <id name="id" column="ID" type="java.lang.Long">
+            <generator class="sequence">
+                <param name="sequence">HIBERNATE_SEQUENCE</param>
+            </generator>
+        </id>
+
+        <property name="cuit" column="CUIT" type="string" length="13" not-null="true"/>
+        <property name="razonSocial" column="RAZON_SOCIAL" type="string"/>
+        <property name="condicionIva" column="CONDICION_IVA" type="string"/>
+        <property name="domicilioFiscal" column="DOMICILIO_FISCAL" type="string"/>
+        <property name="activo" column="ACTIVO" type="int"/>
+
+    </class>
+
+</hibernate-mapping>
