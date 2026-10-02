@@ -1,35 +1,26 @@
 package com.arquita.legacy.dominio;
 
+import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+/**
+ * POJO mapeado por XML: ver src/main/resources/mapeo/Pago.hbm.xml.
+ * Sin anotaciones de persistencia a proposito -- asi se mapeaba antes de JPA.
+ */
+public class Pago implements Serializable {
 
-@Entity
-@Table(name = "PAGO")
-public class Pago {
+    private static final long serialVersionUID = 1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    @Column(name = "FACTURA_ID")
     private Long facturaId;
 
-    @Column(name = "FECHA")
     private Date fecha;
 
-    @Column(name = "MONTO")
     private double monto;
 
-    @Column(name = "MEDIO_PAGO")
     private String medioPago;
 
-    @Column(name = "ESTADO")
     private String estado;
 
     public Pago() {

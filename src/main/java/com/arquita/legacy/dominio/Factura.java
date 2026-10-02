@@ -1,74 +1,48 @@
 package com.arquita.legacy.dominio;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.OneToMany;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+/**
+ * POJO mapeado por XML: ver src/main/resources/mapeo/Factura.hbm.xml.
+ * Sin anotaciones de persistencia a proposito -- asi se mapeaba antes de JPA.
+ */
+public class Factura implements Serializable {
 
-@Entity
-@Table(name = "FACTURA")
-public class Factura {
+    private static final long serialVersionUID = 1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    @Column(name = "NUMERO")
     private Long numero;
 
-    @Column(name = "PUNTO_VENTA")
     private Integer puntoVenta;
 
-    @Column(name = "TIPO_COMPROBANTE")
     private int tipoComprobante;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "FECHA")
     private Date fecha;
 
-    @Column(name = "CUIT_EMISOR")
     private String cuitEmisor;
 
-    @Column(name = "CUIT_RECEPTOR")
     private String cuitReceptor;
 
-    @Column(name = "IMPORTE_NETO")
     private double importeNeto;
 
-    @Column(name = "IMPORTE_IVA")
     private double importeIva;
 
-    @Column(name = "IMPORTE_TOTAL")
     private double importeTotal;
 
-    @Column(name = "MONEDA")
     private String moneda = Moneda.ARS;
 
-    @Column(name = "COTIZACION_AL_EMITIR")
     private Double cotizacionAlEmitir;
 
-    @Column(name = "ESTADO")
     private int estado = EstadoFactura.BORRADOR;
 
-    @Column(name = "CAE")
     private String cae;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CAE_VENCIMIENTO")
     private Date caeVencimiento;
 
-    @OneToMany(cascade = CascadeType.ALL)
-    @javax.persistence.JoinColumn(name = "FACTURA_ID")
     private List<DetalleFactura> detalles = new ArrayList<DetalleFactura>();
 
     public Factura() {

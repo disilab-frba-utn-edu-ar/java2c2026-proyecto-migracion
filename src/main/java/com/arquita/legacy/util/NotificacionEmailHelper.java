@@ -1,7 +1,4 @@
-package com.arquita.legacy.service;
-
-import com.arquita.legacy.util.ArquitaUtils;
-import com.arquita.legacy.util.Constantes;
+package com.arquita.legacy.util;
 
 public class NotificacionEmailHelper {
 

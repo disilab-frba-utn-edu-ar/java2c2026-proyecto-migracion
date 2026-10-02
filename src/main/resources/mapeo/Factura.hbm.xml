@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.arquita.legacy.dominio">
+
+    <class name="Factura" table="FACTURA">
+
+        <id name="id" column="ID" type="java.lang.Long">
+            <generator class="sequence">
+                <param name="sequence">HIBERNATE_SEQUENCE</param>
+            </generator>
+        </id>
+
+        <property name="numero" column="NUMERO" type="java.lang.Long"/>
+        <property name="puntoVenta" column="PUNTO_VENTA" type="java.lang.Integer"/>
+        <property name="tipoComprobante" column="TIPO_COMPROBANTE" type="int" not-null="true"/>
+        <property name="fecha" column="FECHA" type="timestamp"/>
+        <property name="cuitEmisor" column="CUIT_EMISOR" type="string"/>
+        <property name="cuitReceptor" column="CUIT_RECEPTOR" type="string"/>
+        <property name="importeNeto" column="IMPORTE_NETO" type="double"/>
+        <property name="importeIva" column="IMPORTE_IVA" type="double"/>
+        <property name="importeTotal" column="IMPORTE_TOTAL" type="double"/>
+        <property name="moneda" column="MONEDA" type="string"/>
+        <property name="cotizacionAlEmitir" column="COTIZACION_AL_EMITIR" type="java.lang.Double"/>
+        <property name="estado" column="ESTADO" type="int" not-null="true"/>
+        <property name="cae" column="CAE" type="string"/>
+        <property name="caeVencimiento" column="CAE_VENCIMIENTO" type="timestamp"/>
+
+        <!-- Unidireccional, igual que el @OneToMany + @JoinColumn de antes:
+             DetalleFactura no tiene referencia de vuelta a Factura, asi que
+             cada insert de detalle sale seguido de un update para completar
+             la FK (el mismo comportamiento N+1-ish de siempre). -->
+        <bag name="detalles" cascade="all" table="DETALLE_FACTURA">
+            <key column="FACTURA_ID"/>
+            <one-to-many class="com.arquita.legacy.dominio.DetalleFactura"/>
+        </bag>
+
+    </class>
+
+</hibernate-mapping>

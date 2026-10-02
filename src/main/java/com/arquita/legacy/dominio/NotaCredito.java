@@ -1,48 +1,32 @@
 package com.arquita.legacy.dominio;
 
+import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+/**
+ * POJO mapeado por XML: ver src/main/resources/mapeo/NotaCredito.hbm.xml.
+ * Sin anotaciones de persistencia a proposito -- asi se mapeaba antes de JPA.
+ */
+public class NotaCredito implements Serializable {
 
-@Entity
-@Table(name = "NOTA_CREDITO")
-public class NotaCredito {
+    private static final long serialVersionUID = 1L;
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    @Column(name = "FACTURA_ORIGINAL_ID")
     private Long facturaOriginalId;
 
-    @Column(name = "NUMERO")
     private Long numero;
 
-    @Column(name = "PUNTO_VENTA")
     private Integer puntoVenta;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "FECHA")
     private Date fecha;
 
-    @Column(name = "MOTIVO")
     private String motivo;
 
-    @Column(name = "IMPORTE")
     private double importe;
 
-    @Column(name = "CAE")
     private String cae;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "CAE_VENCIMIENTO")
     private Date caeVencimiento;
 
     public NotaCredito() {

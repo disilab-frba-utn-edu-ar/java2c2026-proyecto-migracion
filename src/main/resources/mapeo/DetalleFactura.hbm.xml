@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC
+        "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
+        "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
+<hibernate-mapping package="com.arquita.legacy.dominio">
+
+    <class name="DetalleFactura" table="DETALLE_FACTURA">
+
+        <id name="id" column="ID" type="java.lang.Long">
+            <generator class="sequence">
+                <param name="sequence">HIBERNATE_SEQUENCE</param>
+            </generator>
+        </id>
+
+        <!-- FACTURA_ID no se mapea aca: la escribe el <key> del <bag> en
+             Factura.hbm.xml (coleccion unidireccional, sin propiedad inversa). -->
+        <property name="descripcion" column="DESCRIPCION" type="string"/>
+        <property name="cantidad" column="CANTIDAD" type="double"/>
+        <property name="precioUnitario" column="PRECIO_UNITARIO" type="double"/>
+        <property name="alicuotaIva" column="ALICUOTA_IVA" type="double"/>
+
+    </class>
+
+</hibernate-mapping>
